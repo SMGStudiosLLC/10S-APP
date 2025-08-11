@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HTML Runner">
+    <title>HTML Runner for iOS</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --ios-blue: #007AFF;
+            --ios-gray: #8E8E93;
+            --ios-light-gray: #F2F2F7;
+            --ios-separator: #C6C6C8;
+            --ios-background: #FFFFFF;
+            --ios-secondary-background: #F2F2F7;
+            --ios-text: #000000;
+            --ios-secondary-text: #3C3C43;
+            --ios-green: #34C759;
+            --ios-red: #FF3B30;
+            --safe-area-top: env(safe-area-inset-top, 0);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ios-background: #000000;
+                --ios-secondary-background: #1C1C1E;
+                --ios-light-gray: #1C1C1E;
+                --ios-separator: #38383A;
+                --ios-text: #FFFFFF;
+                --ios-secondary-text: #EBEBF5;
+                --ios-gray: #8E8E93;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--ios-background);
+            color: var(--ios-text);
+            overflow-x: hidden;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+        }
+
+        .header {
+            background: var(--ios-background);
+            border-bottom: 0.5px solid var(--ios-separator);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: var(--safe-area-top);
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .header h1 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--ios-text);
+        }
+
+        .btn {
+            background: var(--ios-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .btn.secondary {
+            background: var(--ios-secondary-background);
+            color: var(--ios-blue);
+        }
+
+        .btn.danger {
+            background: var(--ios-red);
+            color: white;
+        }
+
+        .btn.success {
+            background: var(--ios-green);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 73px);
+        }
+
+        .toolbar {
+            background: var(--ios-secondary-background);
+            border-bottom: 0.5px solid var(--ios-separator);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .toolbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+            background: var(--ios-background);
+        }
+
+        .editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 16px;
+            background: var(--ios-background);
+            color: var(--ios-text);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .editor::placeholder {
+            color: var(--ios-gray);
+        }
+
+        .preview-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--ios-background);
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .preview-container.active {
+            transform: translateY(0);
+        }
+
+        .preview-header {
+            background: var(--ios-background);
+            border-bottom: 0.5px solid var(--ios-separator);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: calc(12px + var(--safe-area-top));
+        }
+
+        .preview-content {
+            flex: 1;
+            position: relative;
+            height: calc(100vh - var(--safe-area-top) - 73px);
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--ios-background);
+            border-radius: 16px 16px 0 0;
+            padding: 20px;
+            padding-bottom: calc(20px + var(--safe-area-bottom));
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+
+        .modal-description {
+            font-size: 13px;
+            color: var(--ios-secondary-text);
+            margin: 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .status-bar {
+            background: var(--ios-secondary-background);
+            padding: 8px 16px;
+            font-size: 12px;
+            color: var(--ios-secondary-text);
+            border-top: 0.5px solid var(--ios-separator);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .line-numbers {
+            user-select: none;
+            color: var(--ios-gray);
+        }
+
+        @media (max-width: 480px) {
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .btn {
+                font-size: 14px;
+                padding: 6px 12px;
+            }
+        }
+
+        .success-indicator {
+            color: var(--ios-green);
+            font-weight: 500;
+        }
+
+        .error-indicator {
+            color: var(--ios-red);
+            font-weight: 500;
+        }
+
+        .loading {
+            opacity: 0.6;
+        }
+
+        /* Smooth transitions for iOS feel */
+        .btn, .editor, .preview-container, .modal {
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .editor {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 3px;
+            height: 3px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--ios-gray);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HTML Runner</h1>
+        <button class="btn" id="previewBtn">Preview</button>
+    </div>
+
+    <div class="main-container">
+        <div class="toolbar">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".html,.htm,.txt">
+                <button class="btn secondary" onclick="document.getElementById('fileInput').click()">Upload</button>
+            </div>
+            <button class="btn secondary" id="saveBtn">Save</button>
+            <button class="btn secondary" id="clearBtn">Clear</button>
+            <button class="btn secondary" id="formatBtn">Format</button>
+            <button class="btn secondary" id="shareBtn">Share</button>
+        </div>
+
+        <div class="content-area">
+            <div class="editor-container">
+                <textarea class="editor" id="editor" placeholder="Paste or type your HTML code here...
+
+Example:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Page</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; }
+    </style>
+</head>
+<body>
+    <h1>Hello, iOS!</h1>
+</body>
+</html>"></textarea>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="statusText">Ready</span>
+            <span id="lineInfo">Line 1, Col 1</span>
+        </div>
+    </div>
+
+    <div class="preview-container" id="previewContainer">
+        <div class="preview-header">
+            <button class="btn secondary" id="closePreviewBtn">Close</button>
+            <span>Preview</span>
+            <button class="btn secondary" id="openNewTabBtn">New Tab</button>
+        </div>
+        <div class="preview-content">
+            <iframe class="preview-iframe" id="previewIframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Action</h3>
+                <p class="modal-description" id="modalDescription">Description</p>
+            </div>
+            <div class="modal-actions" id="modalActions">
+                <!-- Actions will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class HTMLRunner {
+            constructor() {
+                this.editor = document.getElementById('editor');
+                this.previewContainer = document.getElementById('previewContainer');
+                this.previewIframe = document.getElementById('previewIframe');
+                this.statusText = document.getElementById('statusText');
+                this.lineInfo = document.getElementById('lineInfo');
+                this.modalOverlay = document.getElementById('modalOverlay');
+                
+                this.initializeEventListeners();
+                this.loadFromStorage();
+                this.updateLineInfo();
+            }
+
+            initializeEventListeners() {
+                // File upload
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                });
+
+                // Toolbar buttons
+                document.getElementById('previewBtn').addEventListener('click', () => this.showPreview());
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveCode());
+                document.getElementById('clearBtn').addEventListener('click', () => this.showClearConfirmation());
+                document.getElementById('formatBtn').addEventListener('click', () => this.formatCode());
+                document.getElementById('shareBtn').addEventListener('click', () => this.shareCode());
+
+                // Preview controls
+                document.getElementById('closePreviewBtn').addEventListener('click', () => this.hidePreview());
+                document.getElementById('openNewTabBtn').addEventListener('click', () => this.openInNewTab());
+
+                // Editor events
+                this.editor.addEventListener('input', () => {
+                    this.autoSave();
+                    this.updateStatus('Modified');
+                });
+
+                this.editor.addEventListener('selectionchange', () => this.updateLineInfo());
+                this.editor.addEventListener('keyup', () => this.updateLineInfo());
+                this.editor.addEventListener('click', () => this.updateLineInfo());
+
+                // Modal events
+                this.modalOverlay.addEventListener('click', (e) => {
+                    if (e.target === this.modalOverlay) {
+                        this.hideModal();
+                    }
+                });
+
+                // Clipboard paste detection
+                document.addEventListener('paste', (e) => {
+                    if (document.activeElement !== this.editor) {
+                        const clipboardData = e.clipboardData || window.clipboardData;
+                        const pastedData = clipboardData.getData('text');
+                        if (pastedData.includes('<html') || pastedData.includes('<!DOCTYPE')) {
+                            this.editor.value = pastedData;
+                            this.editor.focus();
+                            this.updateStatus('Code pasted');
+                            this.autoSave();
+                        }
+                    }
+                });
+
+                // Prevent zoom on double tap
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', (e) => {
+                    const now = new Date().getTime();
+                    if (now - lastTouchEnd <= 300) {
+                        e.preventDefault();
+                    }
+                    lastTouchEnd = now;
+                }, false);
+            }
+
+            handleFileUpload(file) {
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.editor.value = e.target.result;
+                    this.updateStatus(`Loaded: ${file.name}`);
+                    this.autoSave();
+                };
+                reader.readAsText(file);
+            }
+
+            showPreview() {
+                const code = this.editor.value.trim();
+                if (!code) {
+                    this.updateStatus('No code to preview');
+                    return;
+                }
+
+                try {
+                    const blob = new Blob([code], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    this.previewIframe.src = url;
+                    this.previewContainer.classList.add('active');
+                    this.updateStatus('Preview opened');
+                } catch (error) {
+                    this.updateStatus('Preview error');
+                    console.error('Preview error:', error);
+                }
+            }
+
+            hidePreview() {
+                this.previewContainer.classList.remove('active');
+                // Clean up blob URL
+                if (this.previewIframe.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(this.previewIframe.src);
+                }
+                this.previewIframe.src = '';
+            }
+
+            openInNewTab() {
+                const code = this.editor.value.trim();
+                if (!code) return;
+
+                const blob = new Blob([code], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                this.updateStatus('Opened in new tab');
+            }
+
+            saveCode() {
+                const code = this.editor.value.trim();
+                if (!code) {
+                    this.updateStatus('No code to save');
+                    return;
+                }
+
+                const blob = new Blob([code], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'code.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.updateStatus('File saved');
+            }
+
+            formatCode() {
+                let code = this.editor.value;
+                if (!code.trim()) return;
+
+                try {
+                    // Basic HTML formatting
+                    code = code.replace(/></g, '>\n<');
+                    code = code.replace(/^\s+|\s+$/gm, '');
+                    
+                    const lines = code.split('\n');
+                    let formatted = '';
+                    let indent = 0;
+                    
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (!line) continue;
+                        
+                        if (line.startsWith('</')) {
+                            indent = Math.max(0, indent - 1);
+                        }
+                        
+                        formatted += '  '.repeat(indent) + line + '\n';
+                        
+                        if (line.startsWith('<') && !line.startsWith('</') && !line.endsWith('/>') && !this.isSelfClosingTag(line)) {
+                            indent++;
+                        }
+                    }
+                    
+                    this.editor.value = formatted.trim();
+                    this.updateStatus('Code formatted');
+                    this.autoSave();
+                } catch (error) {
+                    this.updateStatus('Format error');
+                }
+            }
+
+            isSelfClosingTag(line) {
+                const selfClosing = ['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'];
+                const tagMatch = line.match(/<(\w+)/);
+                return tagMatch && selfClosing.includes(tagMatch[1].toLowerCase());
+            }
+
+            shareCode() {
+                const code = this.editor.value.trim();
+                if (!code) {
+                    this.updateStatus('No code to share');
+                    return;
+                }
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'HTML Code',
+                        text: code
+                    });
+                } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        this.updateStatus('Code copied to clipboard');
+                    });
+                } else {
+                    // Fallback
+                    this.editor.select();
+                    document.execCommand('copy');
+                    this.updateStatus('Code copied');
+                }
+            }
+
+            showClearConfirmation() {
+                this.showModal('Clear Code', 'Are you sure you want to clear all code?', [
+                    {
+                        text: 'Cancel',
+                        style: 'secondary',
+                        action: () => this.hideModal()
+                    },
+                    {
+                        text: 'Clear',
+                        style: 'danger',
+                        action: () => {
+                            this.editor.value = '';
+                            this.updateStatus('Code cleared');
+                            this.autoSave();
+                            this.hideModal();
+                        }
+                    }
+                ]);
+            }
+
+            showModal(title, description, actions) {
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalDescription').textContent = description;
+                
+                const actionsContainer = document.getElementById('modalActions');
+                actionsContainer.innerHTML = '';
+                
+                actions.forEach(action => {
+                    const button = document.createElement('button');
+                    button.className = `btn ${action.style || ''}`;
+                    button.textContent = action.text;
+                    button.addEventListener('click', action.action);
+                    actionsContainer.appendChild(button);
+                });
+                
+                this.modalOverlay.classList.add('active');
+            }
+
+            hideModal() {
+                this.modalOverlay.classList.remove('active');
+            }
+
+            updateStatus(message) {
+                this.statusText.textContent = message;
+                setTimeout(() => {
+                    if (this.statusText.textContent === message) {
+                        this.statusText.textContent = 'Ready';
+                    }
+                }, 3000);
+            }
+
+            updateLineInfo() {
+                const textarea = this.editor;
+                const text = textarea.value;
+                const cursorPos = textarea.selectionStart;
+                
+                const textBeforeCursor = text.substring(0, cursorPos);
+                const line = textBeforeCursor.split('\n').length;
+                const col = textBeforeCursor.split('\n').pop().length + 1;
+                
+                this.lineInfo.textContent = `Line ${line}, Col ${col}`;
+            }
+
+            autoSave() {
+                try {
+                    localStorage.setItem('htmlrunner_code', this.editor.value);
+                } catch (error) {
+                    console.error('Auto-save failed:', error);
+                }
+            }
+
+            loadFromStorage() {
+                try {
+                    const saved = localStorage.getItem('htmlrunner_code');
+                    if (saved) {
+                        this.editor.value = saved;
+                        this.updateStatus('Previous session restored');
+                    }
+                } catch (error) {
+                    console.error('Load from storage failed:', error);
+                }
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            new HTMLRunner();
+        });
+
+        // PWA installation
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+    </script>
+</body>
+</html>
